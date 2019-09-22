@@ -1,0 +1,10 @@
+name = "Beancount"
+uuid = "9874df79-2a41-4a3a-8974-ba6ef611694d"
+authors = ["Sebastian Pech <sebastian.pech@me.com>"]
+version = "0.1.0"
+
+[deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+Decimals = "abce61dc-4473-55a0-ba07-351d65e31d42"
+Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
+PyCall = "438e738f-606a-5dbb-bf0a-cddfbfd45ab0"
