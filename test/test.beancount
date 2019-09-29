@@ -1,5 +1,0 @@
-1970-01-01 open Equity:Opening-Balances
-1970-01-01 open Assets:TestAccount
-2019-09-29 * "This is the description" #bar#foo 
-    Equity:Opening-Balances
-    Assets:TestAccount  100.3 EUR

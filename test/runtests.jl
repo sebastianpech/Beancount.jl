@@ -56,7 +56,9 @@ end
         println(f,tx)
     end
 
+    @test isfile("test.beancount")
     entries, errors, options = Beancount.load_file("test.beancount")
+    isfile("test.beancount") && rm("test.beancount")
 
     @test length(errors) == 0
 
