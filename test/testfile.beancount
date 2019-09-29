@@ -1,0 +1,17 @@
+option "title" "Beancount Example Ledger"
+option "operating_currency" "EUR"
+
+
+1970-01-01 open Equity:Opening-Balances
+1970-01-01 open Assets:TestAccount  EUR
+1970-01-01 open Expenses:Stuff
+
+2007-12-31 pad Assets:TestAccount Equity:Opening-Balances
+2008-01-01 balance Assets:TestAccount 1412.24 EUR
+
+2008-01-01 * "Something" "Else" #tagA #tagB ^linkA
+    ; comment here
+    Assets:TestAccount        -30 EUR {185.40 USD} @ 193.02 USD ; comment
+    Expenses:Stuff
+
+2008-01-05 close Assets:TestAccount

@@ -4,6 +4,9 @@ using PyCall
 using Decimals
 using Dates
 using Parameters
+using Combinatorics
+
+import Base.==
 
 const DEFAULT_CURRENCY = "EUR"
 const aDict = Union{Nothing,Dict{Any,Any}}
@@ -16,7 +19,7 @@ function __init__()
     load_file = loader.load_file
 end
 
-export  Posting, Transaction, issimilar, balances, isTransaction
+export Posting, Transaction, issimilar, balances, isTransaction, from_python, txn, pad
 
 Base.homedir(path::AbstractString...) = joinpath(homedir(),path...)
 
@@ -26,13 +29,22 @@ struct Posting
     value::DN
     currency::SN
     comment::SN
-    Posting(tup::Tuple{String,Tuple{PyObject,String},Any,Any,Any,Dict{Any,Any}}) = new(
-        tup[end],
-        tup[1],
-        convert(Decimal,tup[2][1]),
-        tup[2][2],nothing)
-    Posting(;account::String,value::DN=nothing,currency::SN=nothing,comment::SN=nothing) = new(
-        nothing,account,value,currency,comment)
+    Posting(;account::String,value::DN=nothing,currency::SN=nothing,comment::SN=nothing,location::aDict=nothing) = new(
+        location,account,value,currency,comment)
+end
+
+function ==(pA::Posting,pB::Posting)
+    pA.account == pB.account && pA.value == pB.value && pA.currency == pB.currency
+end
+
+function ==(pA::Vector{Posting},pB::Vector{Posting})
+    for a in permutations(pA)
+        if all((a[i] == pB[i] for i in 1:length(pB)))
+            return true
+        end
+        println(a)
+    end
+    return false
 end
 
 function Base.show(io::IO,p::Posting)
@@ -46,7 +58,12 @@ function Base.show(io::IO,p::Posting)
     end
 end
 
-struct Transaction
+abstract type AbstractTransactionType end
+
+struct txn <: AbstractTransactionType end
+struct pad <: AbstractTransactionType end
+
+struct Transaction{typ<:AbstractTransactionType}
     location::aDict
     date::Date
     payee::SN
@@ -54,22 +71,54 @@ struct Transaction
     tags::Set{String}
     links::Set{String}
     postings::Vector{Posting}
-    function Transaction(tup::Tuple{aDict,Date,Any,Any,Any,Any,Any,Any})
-        @assert tup[3] == "*" || tup[3] == "txn"
-        new(tup[1], tup[2], tup[4], tup[5],
-            Set(tup[6]), Set(tup[7]),
-            Posting.(tup[8]))
-    end
-    Transaction(;date::Date,payee::SN=nothing,description::String,tags::Set{String}=Set{String}(),links::Set{String}=Set{String}(),postings::Vector{Posting}=Posting[]) = new(
+    Transaction{typ}(;date::Date,payee::SN=nothing,description::String,tags::Set{String}=Set{String}(),links::Set{String}=Set{String}(),postings::Vector{Posting}=Posting[],location::aDict=nothing) where typ <: AbstractTransactionType = new{typ}(
         nothing,date,clean_text(payee),clean_text(description),tags,links,postings)
 end
+
+function ==(txA::Transaction{T},txB::Transaction{T}) where T <: AbstractTransactionType
+    txA.date        == txA.date &&
+    txA.payee       == txA.payee &&
+    txA.description == txA.description &&
+    txA.tags        == txA.tags &&
+    txA.links       == txA.links &&
+    txA.postings    == txA.postings
+end
+
 clean_text(::Nothing) = nothing
+
 function clean_text(st::String)
     reduce(replace,[
         "\n" => " ",
         "\t" => " ",
         r" {2,}" => " ",
     ],init=st)
+end
+
+function from_python_posting(tup::NTuple{6,Any})
+    Posting(
+        location = tup[end],
+        account=tup[1],
+        value=convert(Decimal,tup[2][1]),
+        currency=tup[2][2])
+end
+
+from_python(::Any) = nothing
+
+function from_python(entry::NTuple{8,Any}) 
+    if entry[3] in ("*","txn")
+        typ = txn
+    elseif entry[3] == "P"
+        typ = pad
+    else
+        error("Unknown transaction type '$(entry[3])'.")
+    end
+    Transaction{typ}(location=entry[1],
+                     date=entry[2],
+                     payee=entry[4],
+                     description=entry[5],
+                     tags=Set(String.(entry[6])),
+                     links=Set(String.(entry[7])),
+                     postings=from_python_posting.(entry[8]))
 end
 
 function Base.show(io::IO,t::Transaction)
