@@ -29,8 +29,8 @@ struct Posting
     value::DN
     currency::SN
     comment::SN
-    Posting(;account::String,value::DN=nothing,currency::SN=nothing,comment::SN=nothing,location::aDict=nothing) = new(
-        location,account,value,currency,comment)
+    Posting(;account::String,value::Union{Nothing,Number}=nothing,currency::SN=nothing,comment::SN=nothing,location::aDict=nothing) = new(
+        location,account,value == nothing ? value : convert(Decimal,value),currency,comment)
 end
 
 function ==(pA::Posting,pB::Posting)
@@ -63,6 +63,8 @@ abstract type AbstractTransactionType end
 struct txn <: AbstractTransactionType end
 struct pad <: AbstractTransactionType end
 
+const Collection1D{T} = Union{Vector{T},Set{T},NTuple{N,T}} where N
+
 struct Transaction{typ<:AbstractTransactionType}
     location::aDict
     date::Date
@@ -71,8 +73,11 @@ struct Transaction{typ<:AbstractTransactionType}
     tags::Set{String}
     links::Set{String}
     postings::Vector{Posting}
-    Transaction{typ}(;date::Date,payee::SN=nothing,description::String,tags::Set{String}=Set{String}(),links::Set{String}=Set{String}(),postings::Vector{Posting}=Posting[],location::aDict=nothing) where typ <: AbstractTransactionType = new{typ}(
-        nothing,date,clean_text(payee),clean_text(description),tags,links,postings)
+    Transaction{typ}(;date::Date,payee::SN=nothing,description::String,
+                     tags::Collection1D{String}=Set{String}(),links::Collection1D{String}=Set{String}(),postings::Vector{Posting}=Posting[],location::aDict=nothing) where typ <: AbstractTransactionType = new{typ}(
+                         nothing,date,clean_text(payee),clean_text(description),
+                         tags isa Set ? tags : Set(tags),
+                         links isa Set ? links : Set(links),postings)
 end
 
 function ==(txA::Transaction{T},txB::Transaction{T}) where T <: AbstractTransactionType
