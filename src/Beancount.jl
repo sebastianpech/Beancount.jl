@@ -121,8 +121,8 @@ function from_python(entry::NTuple{8,Any})
                      date=entry[2],
                      payee=entry[4],
                      description=entry[5],
-                     tags=Set(String.(entry[6])),
-                     links=Set(String.(entry[7])),
+                     tags=Set{String}(string.(entry[6])),
+                     links=Set{String}(string.(entry[7])),
                      postings=from_python_posting.(entry[8]))
 end
 
